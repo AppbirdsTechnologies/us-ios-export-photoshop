@@ -3,8 +3,8 @@
  * =============================
  *
  * Version: 1.0.0
- * Author: Gaston Figueroa (Uncorked Studios)
- * Site: uncorkedstudios.com
+ * Author: Yash Shah(Appbirds Technologies)
+ * Site: appbirds.co
  * Licensed under the MIT license
  */
 
