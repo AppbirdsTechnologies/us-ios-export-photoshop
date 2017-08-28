@@ -8,36 +8,47 @@
  * Licensed under the MIT license
  */
 
-
 // Photoshop variables
 var docRef = app.activeDocument,
 	activeLayer = docRef.activeLayer,
 	activeLayer2,
-	newWidth, 
-	newHeight,
-	docName = docRef.name;
+	docName = docRef.name,
+	docPath = docRef.path,	
 
-var scaleFactors = {
-	'@3x': 1,
-	'@2x': 1.94,
-	'@1x': 3.88,
+
+	resolutionsObj = {
+	'@3x': {
+		density : 1
+	},
+	'@2x': {
+		density : 0.5153
+	},
+	'@1x': {
+		density : 0.25764896
+	},
 };
-
-// Run main function
+// Initialize
 init();
 
-// The other functions
 function init() {
+    
+    // save current ruler unit settings, so we can restore it
+    var ru = app.preferences.rulerUnits;
+    
+    // set ruler units to pixel to ensure scaling works as expected
+    app.preferences.rulerUnits = Units.PIXELS;    
+    
 	if(!isDocumentNew()) {
-		for(var dpi in scaleFactors) {
-			saveFunc(dpi);
+		for(resolution in resolutionsObj) {
+			saveFunc(resolution);
 		}
 	} else {
 		alert("Please save your document before running this script.");
 	}
-}
 
-// Test if the document is new (unsaved)
+    // restore old ruler unit settings
+    app.preferences.rulerUnits = ru;
+}
 
 function isDocumentNew(doc){
 	// assumes doc is the activeDocument
@@ -48,7 +59,7 @@ function isDocumentNew(doc){
 	cTID("Trgt") ); //activeDoc
 	var desc = executeActionGet(ref);
 	var rc = true;
-		if (desc.hasKey(cTID("FilR"))) { //FileReference
+		if (desc.hasKey(cTID("FilR"))) { // FileReference
 		var path = desc.getPath(cTID("FilR"));
 		
 		if (path) {
@@ -58,21 +69,20 @@ function isDocumentNew(doc){
 	return rc;
 };
 
-function resizeDoc(document, scale) {
+
+function resizeDoc(document, resolution) {
 	var calcWidth  = activeLayer.bounds[2] - activeLayer.bounds[0], // Get layer's width
-		calcHeight = activeLayer.bounds[3] - activeLayer.bounds[1]; // Get layer's height	
+	calcHeight = activeLayer.bounds[3] - activeLayer.bounds[1]; // Get layer's height
 
-	// Resize assets
-	newHeight = Math.floor(calcHeight / scaleFactors[scale]);
-	newWidth = Math.floor(calcWidth / scaleFactors[scale]);
+	var newWidth = Math.floor(calcWidth * resolutionsObj[resolution].density);
+	var newHeight = Math.floor(calcHeight * resolutionsObj[resolution].density);
 
-	// Resize temp document using Bicubic interpolation
+	// Resize temp document using Bicubic Interpolation
 	resizeLayer(newWidth);
 
 	// Merge all layers inside the temp document
 	activeLayer2.merge();
 }
-
 
 function resizeLayer(newWidth) {
 	var idImgS = charIDToTypeID( "ImgS" );
@@ -91,8 +101,7 @@ function resizeLayer(newWidth) {
 	executeAction( idImgS, desc2, DialogModes.NO );
 }
 
-function dupToNewFile() {
-	// TO DO: Target all files ending with '#'
+function dupToNewFile() {	
 	var fileName = activeLayer.name.replace(/\.[^\.]+$/, ''), 
 		calcWidth  = Math.ceil(activeLayer.bounds[2] - activeLayer.bounds[0]),
 		calcHeight = Math.ceil(activeLayer.bounds[3] - activeLayer.bounds[1]),
@@ -115,30 +124,34 @@ function dupToNewFile() {
 	activeLayer2.translate(-activeLayer2.bounds[0],-activeLayer2.bounds[1]);
 }
 
-function saveFunc(dpi) {
+function saveFunc(resolution) {
 	dupToNewFile();
-	var docRef2 = app.activeDocument;
-	resizeDoc(docRef2, dpi);
+	
+	var tempDoc = app.activeDocument;
+	
+	resizeDoc(tempDoc, resolution);
 
-	var Name = docRef2.name.replace(/\.[^\.]+$/, ''), 
-		Ext = decodeURI(docRef2.name).replace(/^.*\./,''), 
-		Path = docRef.path,
-		folder = Folder(Path + '/' + docName + '-assets/');
-		
-	if(!folder.exists) {
-		folder.create();
+	var tempDocName = tempDoc.name.replace(/\.[^\.]+$/, ''),
+		Ext = decodeURI(tempDoc.name).replace(/^.*\./,''),
+		docFolder = Folder(docPath + '/' + docName + '-assets/');
+
+	if(!docFolder.exists) {
+		docFolder.create();
 	}
 
-	// Name the new asset
-	var saveFile = File(folder + "/" + Name + (dpi === '@1x' ? '' : dpi) + ".png");
-
+	alert(docFolder);
+	var saveFile = File(docFolder + "/" + tempDocName + (resolution === '@3x' ? '@3x' : resolution) + ".png");
+	var saveFile = File(docFolder + "/" + tempDocName + (resolution === '@2x' ? '@2x' : resolution) + ".png");
+	var saveFile = File(docFolder + "/" + tempDocName + (resolution === '@1x' ? '' : resolution) + ".png");
+	
+	
 	var sfwOptions = new ExportOptionsSaveForWeb(); 
-		sfwOptions.format = SaveDocumentType.PNG; 
-		sfwOptions.includeProfile = false; 
-		sfwOptions.interlaced = 0; 
-		sfwOptions.optimized = true; 
-		sfwOptions.quality = 100;
-		sfwOptions.PNG8 = false;
+	sfwOptions.format = SaveDocumentType.PNG; 
+	sfwOptions.includeProfile = false; 
+	sfwOptions.interlaced = 0; 
+	sfwOptions.optimized = true; 
+	sfwOptions.quality = 100;
+	sfwOptions.PNG8 = false;
 
 	// Export the layer as a PNG
 	activeDocument.exportDocument(saveFile, ExportType.SAVEFORWEB, sfwOptions);
