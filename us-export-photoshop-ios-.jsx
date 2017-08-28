@@ -38,7 +38,6 @@ function init() {
 }
 
 // Test if the document is new (unsaved)
-// http://2.adobe-photoshop-scripting.overzone.net/determine-if-file-has-never-been-saved-in-javascript-t264.html
 
 function isDocumentNew(doc){
 	// assumes doc is the activeDocument
@@ -75,7 +74,6 @@ function resizeDoc(document, scale) {
 }
 
 
-// document.resizeImage doesn't seem to support scalestyles so we're using this workaround from http://ps-scripts.com/bb/viewtopic.php?p=14359
 function resizeLayer(newWidth) {
 	var idImgS = charIDToTypeID( "ImgS" );
 	var desc2 = new ActionDescriptor();
